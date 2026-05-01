@@ -1,0 +1,455 @@
+{
+  "info": {
+    "_postman_id": "ac8cecc9-0b84-4d0e-9067-46f4377d2bb9",
+    "name": "Clinical Ordering System",
+    "description": "End-to-end API smoke flow for patient intake, echocardiogram ordering, draft report creation, finalize, amend, cancel, and final order/report synchronization.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.environment.get('baseUrl')) {",
+          "  pm.environment.set('baseUrl', 'http://localhost:8080/api');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Create patient",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Postman\",\n  \"lastName\": \"Reviewer\",\n  \"medicalRecordNumber\": \"MRN-{{$timestamp}}\",\n  \"dateOfBirth\": \"1985-12-10\",\n  \"sex\": \"F\",\n  \"phoneNumber\": \"555-0100\",\n  \"email\": \"postman.reviewer@example.test\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/patients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('patient created', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const patient = pm.response.json();",
+              "pm.environment.set('patientId', patient.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Get patients",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/patients?query=postman",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "query",
+              "value": "postman"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('patients returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Place echo order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patientId\": {{patientId}},\n  \"studyType\": \"ECHOCARDIOGRAM\",\n  \"priority\": \"ROUTINE\",\n  \"orderReason\": \"Postman smoke test for echo workflow\",\n  \"orderedBy\": \"Dr. Postman Reviewer\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('order created with draft report', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const order = pm.response.json();",
+              "pm.expect(order.status).to.eql('ORDERED');",
+              "pm.expect(order.reportStatus).to.eql('DRAFT');",
+              "pm.environment.set('orderId', order.id);",
+              "pm.environment.set('reportId', order.reportId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Get orders",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders?patientId={{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders"
+          ],
+          "query": [
+            {
+              "key": "patientId",
+              "value": "{{patientId}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('orders returned for patient', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Get report",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/reports/{{reportId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "{{reportId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('draft report exists', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const report = pm.response.json();",
+              "  pm.expect(report.status).to.eql('DRAFT');",
+              "  pm.expect(report.orderStatus).to.eql('ORDERED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Save draft findings",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"findings\": \"Draft findings saved from Postman before finalization.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reports/{{reportId}}/draft",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "{{reportId}}",
+            "draft"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('draft findings saved', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().status).to.eql('DRAFT');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Finalize report",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"findings\": \"Normal left ventricular size and preserved systolic function. Finalized from Postman.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reports/{{reportId}}/finalize",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "{{reportId}}",
+            "finalize"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('report finalized and order synchronized', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const report = pm.response.json();",
+              "  pm.expect(report.status).to.eql('FINALIZED');",
+              "  pm.expect(report.orderStatus).to.eql('FINALIZED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Verify finalized",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/reports/{{reportId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "{{reportId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('report remains finalized', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().status).to.eql('FINALIZED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Amend report",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"findings\": \"Normal left ventricular size. Mild concentric hypertrophy noted. Amended from Postman.\",\n  \"amendmentReason\": \"Added ventricular wall detail during Postman smoke test.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reports/{{reportId}}/amend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "{{reportId}}",
+            "amend"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('report amended and order synchronized', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const report = pm.response.json();",
+              "  pm.expect(report.status).to.eql('AMENDED');",
+              "  pm.expect(report.orderStatus).to.eql('AMENDED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Cancel report",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cancelReason\": \"Duplicate study entered during Postman smoke test.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reports/{{reportId}}/cancel",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "{{reportId}}",
+            "cancel"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('report canceled and order synchronized', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const report = pm.response.json();",
+              "  pm.expect(report.status).to.eql('CANCELED');",
+              "  pm.expect(report.orderStatus).to.eql('CANCELED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Final check - order and report are canceled",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders/{{orderId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            "{{orderId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('final order state is canceled', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const order = pm.response.json();",
+              "  pm.expect(order.status).to.eql('CANCELED');",
+              "  pm.expect(order.reportStatus).to.eql('CANCELED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

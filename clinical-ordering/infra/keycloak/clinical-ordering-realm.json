@@ -1,0 +1,39 @@
+{
+  "realm": "clinical-ordering",
+  "enabled": true,
+  "displayName": "Clinical Ordering",
+  "clients": [
+    {
+      "clientId": "clinical-ordering-api",
+      "name": "Clinical Ordering API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "demo-clinician",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Clinician",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
+
